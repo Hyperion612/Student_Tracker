@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from './store/useStore';
+import { useAuth } from './hooks/useAuth';
+import { useSupabaseSync } from './hooks/useSupabaseSync';
+import { signOut } from './lib/api';
 import Onboarding from './components/Onboarding';
+import Auth from './components/Auth';
 import Heatmap from './components/Heatmap';
 import DashboardStats from './components/DashboardStats';
 import QuickMark from './components/QuickMark';
@@ -9,7 +13,7 @@ import Subjects from './components/Subjects';
 import Achievements from './components/Achievements';
 import ExportButton from './components/ExportButton';
 import WeeklyOverview from './components/WeeklyOverview';
-import { LayoutDashboard, CalendarRange, BookOpen, Trophy, Download, Menu, X, Sparkles } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Trophy, Download, Menu, X, Sparkles, LogOut } from 'lucide-react';
 
 type Tab = 'dashboard' | 'subjects' | 'achievements' | 'export';
 
@@ -22,12 +26,35 @@ const NAV_ITEMS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 
 export default function App() {
   const { settings } = useStore();
+  const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Sync with Supabase when user is authenticated
+  useSupabaseSync(user);
+
+  // Show loading screen
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-lime-400/30 border-t-lime-400 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Show auth screen if not logged in
+  if (!user) {
+    return <Auth onAuthSuccess={() => {}} />;
+  }
+
+  // Show onboarding if not complete
   if (!settings.onboardingComplete) {
     return <Onboarding />;
   }
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex relative overflow-hidden">
@@ -37,6 +64,7 @@ export default function App() {
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-cyan-400/5 rounded-full blur-[128px]" />
         <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-violet-400/3 rounded-full blur-[100px]" />
       </div>
+
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col w-64 border-r border-neutral-800 bg-neutral-950/80 backdrop-blur-xl p-4 sticky top-0 h-screen relative z-10">
         <div className="flex items-center gap-2 mb-8 px-2">
@@ -69,15 +97,22 @@ export default function App() {
         </nav>
 
         <div className="mt-auto pt-4 border-t border-neutral-800">
-          <div className="flex items-center gap-2 px-2">
+          <div className="flex items-center gap-2 px-2 mb-2">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center text-xs font-bold">
               {settings.name.charAt(0).toUpperCase()}
             </div>
-            <div>
-              <p className="text-sm text-white font-medium">{settings.name}</p>
-              <p className="text-[10px] text-neutral-500">Студент</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-white font-medium truncate">{settings.name}</p>
+              <p className="text-[10px] text-neutral-500 truncate">{user.email}</p>
             </div>
           </div>
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+          >
+            <LogOut className="w-4 h-4" />
+            Выйти
+          </button>
         </div>
       </aside>
 
@@ -122,6 +157,13 @@ export default function App() {
                     {item.label}
                   </button>
                 ))}
+                <button
+                  onClick={handleSignOut}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-400 hover:bg-red-500/10 transition-all"
+                >
+                  <LogOut className="w-5 h-5" />
+                  Выйти
+                </button>
               </nav>
             </motion.div>
           )}

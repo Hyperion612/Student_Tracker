@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store/useStore';
+import { updateProfile } from '../lib/api';
+import { useAuth } from '../hooks/useAuth';
 
 const STEPS = [
   {
@@ -24,26 +26,44 @@ const COLORS = [
 ] as const;
 
 export default function Onboarding() {
-  const { settings, updateSettings } = useStore();
+  const { settings, updateSettings, generateDemoData } = useStore();
+  const { user } = useAuth();
   const [step, setStep] = useState(0);
-  const [name, setName] = useState('');
+  const [name, setName] = useState(settings.name || '');
   const [startDate, setStartDate] = useState(settings.semesterStart);
   const [endDate, setEndDate] = useState(settings.semesterEnd);
   const [color, setColor] = useState<typeof COLORS[number]>(COLORS[0]);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step === 0) {
       if (name.trim()) {
         updateSettings({ name: name.trim() });
+        // Sync to Supabase if user is authenticated
+        if (user) {
+          await updateProfile(user.id, { name: name.trim() });
+        }
         setStep(1);
       }
     } else if (step === 1) {
       updateSettings({ semesterStart: startDate, semesterEnd: endDate });
+      // Sync to Supabase if user is authenticated
+      if (user) {
+        await updateProfile(user.id, { 
+          semester_start: startDate, 
+          semester_end: endDate 
+        });
+      }
       setStep(2);
     } else if (step === 2) {
       updateSettings({ accentColor: color.name as 'lime' | 'cyan' | 'violet', onboardingComplete: true });
-      // Generate demo data so user sees the app in action
-      const { generateDemoData } = useStore.getState();
+      // Sync to Supabase if user is authenticated
+      if (user) {
+        await updateProfile(user.id, { 
+          accent_color: color.name as 'lime' | 'cyan' | 'violet',
+          onboarding_complete: true 
+        });
+      }
+      // Generate demo data for local store
       generateDemoData();
     }
   };

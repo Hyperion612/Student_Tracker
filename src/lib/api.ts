@@ -1,16 +1,28 @@
-import { supabase } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 import type { Profile, DayRecord, Subject, UserAchievement, UserGoal } from './supabase';
+
+// Вспомогательная функция для проверки конфигурации
+function ensureConfigured() {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error(
+      'Supabase не настроен. Добавьте VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY в .env файл.'
+    );
+  }
+}
 
 // ============================================
 // AUTH API
 // ============================================
 
 export async function signUp(email: string, password: string, name: string) {
-  const { data, error } = await supabase.auth.signUp({
+  ensureConfigured();
+  
+  const metadata = { name };
+  const { data, error } = await supabase!.auth.signUp({
     email,
     password,
     options: {
-      data: { name },
+      data: metadata,
     },
   });
   
@@ -19,7 +31,9 @@ export async function signUp(email: string, password: string, name: string) {
 }
 
 export async function signIn(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({
+  ensureConfigured();
+  
+  const { data, error } = await supabase!.auth.signInWithPassword({
     email,
     password,
   });
@@ -29,18 +43,24 @@ export async function signIn(email: string, password: string) {
 }
 
 export async function signOut() {
-  const { error } = await supabase.auth.signOut();
+  ensureConfigured();
+  
+  const { error } = await supabase!.auth.signOut();
   if (error) throw error;
 }
 
 export async function getCurrentUser() {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
+  if (!isSupabaseConfigured || !supabase) return null;
+  
+  const result = await supabase.auth.getUser();
+  return result.data.user;
 }
 
 export async function getSession() {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session;
+  if (!isSupabaseConfigured || !supabase) return null;
+  
+  const result = await supabase.auth.getSession();
+  return result.data.session;
 }
 
 // ============================================
@@ -48,7 +68,9 @@ export async function getSession() {
 // ============================================
 
 export async function getProfile(userId: string): Promise<Profile> {
-  const { data, error } = await supabase
+  ensureConfigured();
+  
+  const { data, error } = await supabase!
     .from('profiles')
     .select('*')
     .eq('id', userId)
@@ -58,8 +80,13 @@ export async function getProfile(userId: string): Promise<Profile> {
   return data as Profile;
 }
 
-export async function updateProfile(userId: string, updates: Partial<Omit<Profile, 'id' | 'created_at' | 'updated_at'>>): Promise<Profile> {
-  const { data, error } = await supabase
+export async function updateProfile(
+  userId: string, 
+  updates: Partial<Omit<Profile, 'id' | 'created_at' | 'updated_at'>>
+): Promise<Profile> {
+  ensureConfigured();
+  
+  const { data, error } = await supabase!
     .from('profiles')
     .update(updates)
     .eq('id', userId)
@@ -74,8 +101,14 @@ export async function updateProfile(userId: string, updates: Partial<Omit<Profil
 // DAY RECORDS API
 // ============================================
 
-export async function getDayRecords(userId: string, startDate?: string, endDate?: string): Promise<DayRecord[]> {
-  let query = supabase
+export async function getDayRecords(
+  userId: string, 
+  startDate?: string, 
+  endDate?: string
+): Promise<DayRecord[]> {
+  ensureConfigured();
+  
+  let query = supabase!
     .from('day_records')
     .select('*')
     .eq('user_id', userId)
@@ -99,7 +132,9 @@ export async function upsertDayRecord(
   status: DayRecord['status'], 
   subjectId?: string | null
 ): Promise<DayRecord> {
-  const { data, error } = await supabase
+  ensureConfigured();
+  
+  const { data, error } = await supabase!
     .from('day_records')
     .upsert({
       user_id: userId,
@@ -124,12 +159,14 @@ export async function upsertDayRecords(
     subject_id?: string | null;
   }>
 ): Promise<DayRecord[]> {
+  ensureConfigured();
+  
   const recordsWithUserId = records.map(r => ({
     user_id: userId,
     ...r,
   }));
   
-  const { data, error } = await supabase
+  const { data, error } = await supabase!
     .from('day_records')
     .upsert(recordsWithUserId, {
       onConflict: 'user_id,date',
@@ -141,7 +178,9 @@ export async function upsertDayRecords(
 }
 
 export async function deleteDayRecord(userId: string, date: string) {
-  const { error } = await supabase
+  ensureConfigured();
+  
+  const { error } = await supabase!
     .from('day_records')
     .delete()
     .eq('user_id', userId)
@@ -155,7 +194,9 @@ export async function deleteDayRecord(userId: string, date: string) {
 // ============================================
 
 export async function getSubjects(userId: string): Promise<Subject[]> {
-  const { data, error } = await supabase
+  ensureConfigured();
+  
+  const { data, error } = await supabase!
     .from('subjects')
     .select('*')
     .eq('user_id', userId)
@@ -171,7 +212,9 @@ export async function createSubject(
   color: string, 
   emoji: string
 ): Promise<Subject> {
-  const { data, error } = await supabase
+  ensureConfigured();
+  
+  const { data, error } = await supabase!
     .from('subjects')
     .insert({
       user_id: userId,
@@ -190,7 +233,9 @@ export async function updateSubject(
   subjectId: string, 
   updates: Partial<Pick<Subject, 'name' | 'color' | 'emoji'>>
 ): Promise<Subject> {
-  const { data, error } = await supabase
+  ensureConfigured();
+  
+  const { data, error } = await supabase!
     .from('subjects')
     .update(updates)
     .eq('id', subjectId)
@@ -202,7 +247,9 @@ export async function updateSubject(
 }
 
 export async function deleteSubject(subjectId: string) {
-  const { error } = await supabase
+  ensureConfigured();
+  
+  const { error } = await supabase!
     .from('subjects')
     .delete()
     .eq('id', subjectId);
@@ -215,7 +262,9 @@ export async function deleteSubject(subjectId: string) {
 // ============================================
 
 export async function getAchievements(userId: string): Promise<UserAchievement[]> {
-  const { data, error } = await supabase
+  ensureConfigured();
+  
+  const { data, error } = await supabase!
     .from('user_achievements')
     .select('*')
     .eq('user_id', userId);
@@ -224,8 +273,13 @@ export async function getAchievements(userId: string): Promise<UserAchievement[]
   return data as UserAchievement[];
 }
 
-export async function unlockAchievement(userId: string, achievementId: string): Promise<UserAchievement> {
-  const { data, error } = await supabase
+export async function unlockAchievement(
+  userId: string, 
+  achievementId: string
+): Promise<UserAchievement> {
+  ensureConfigured();
+  
+  const { data, error } = await supabase!
     .from('user_achievements')
     .update({
       unlocked: true,
@@ -245,7 +299,9 @@ export async function unlockAchievement(userId: string, achievementId: string): 
 // ============================================
 
 export async function getGoals(userId: string): Promise<UserGoal[]> {
-  const { data, error } = await supabase
+  ensureConfigured();
+  
+  const { data, error } = await supabase!
     .from('user_goals')
     .select('*')
     .eq('user_id', userId)
@@ -261,7 +317,9 @@ export async function createGoal(
   targetPercent: number, 
   period: 'week' | 'month' | 'semester'
 ): Promise<UserGoal> {
-  const { data, error } = await supabase
+  ensureConfigured();
+  
+  const { data, error } = await supabase!
     .from('user_goals')
     .insert({
       user_id: userId,
@@ -277,7 +335,9 @@ export async function createGoal(
 }
 
 export async function completeGoal(goalId: string): Promise<UserGoal> {
-  const { data, error } = await supabase
+  ensureConfigured();
+  
+  const { data, error } = await supabase!
     .from('user_goals')
     .update({ completed: true })
     .eq('id', goalId)
@@ -289,7 +349,9 @@ export async function completeGoal(goalId: string): Promise<UserGoal> {
 }
 
 export async function deleteGoal(goalId: string) {
-  const { error } = await supabase
+  ensureConfigured();
+  
+  const { error } = await supabase!
     .from('user_goals')
     .delete()
     .eq('id', goalId);
@@ -302,7 +364,9 @@ export async function deleteGoal(goalId: string) {
 // ============================================
 
 export async function getUserStats(userId: string) {
-  const { data, error } = await supabase
+  ensureConfigured();
+  
+  const { data, error } = await supabase!
     .rpc('get_user_stats', { user_uuid: userId });
   
   if (error) throw error;

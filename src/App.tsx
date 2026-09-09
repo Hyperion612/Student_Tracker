@@ -26,13 +26,13 @@ const NAV_ITEMS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 
 export default function App() {
   const { settings } = useStore();
-  const { user, loading } = useAuth();
+  const { user, loading, isConfigured } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Sync with Supabase when user is authenticated
   useSupabaseSync(user);
-
+  
   // Show loading screen
   if (loading) {
     return (
@@ -42,8 +42,8 @@ export default function App() {
     );
   }
 
-  // Show auth screen if not logged in
-  if (!user) {
+  // Show auth screen if not logged in (only if Supabase is configured)
+  if (!user && isConfigured) {
     return <Auth onAuthSuccess={() => {}} />;
   }
 
@@ -53,9 +53,10 @@ export default function App() {
   }
 
   const handleSignOut = async () => {
-    await signOut();
+    if (isConfigured) {
+      await signOut();
+    }
   };
-
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex relative overflow-hidden">
       {/* Background glow effects */}
@@ -103,7 +104,7 @@ export default function App() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm text-white font-medium truncate">{settings.name}</p>
-              <p className="text-[10px] text-neutral-500 truncate">{user.email}</p>
+              <p className="text-[10px] text-neutral-500 truncate">{user?.email || 'Демо-режим'}</p>
             </div>
           </div>
           <button

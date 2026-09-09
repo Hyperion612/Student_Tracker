@@ -1,14 +1,36 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
+// Проверка наличия переменных окружения
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-});
+// Флаг: Supabase настроен или нет
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+// Предупреждение в консоли если Supabase не настроен
+if (!isSupabaseConfigured) {
+  console.warn(
+    '%c⚠️ Supabase не настроен!',
+    'color: #f59e0b; font-weight: bold; font-size: 14px;',
+    '\n\nПриложение работает в локальном режиме (localStorage).',
+    '\nДля синхронизации с облаком:',
+    '\n1. Создайте файл .env в корне проекта',
+    '\n2. Добавьте переменные:',
+    '\n   VITE_SUPABASE_URL=https://your-project.supabase.co',
+    '\n   VITE_SUPABASE_ANON_KEY=your-anon-key',
+    '\n\nПодробная инструкция: README.md → Настройка Supabase'
+  );
+}
+
+// Создание клиента Supabase (или mock если не настроен)
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+    })
+  : null;
 
 // Типы данных
 export interface Profile {

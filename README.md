@@ -57,6 +57,8 @@ npm run build
 
 ## 📘 Настройка Supabase (пошаговая инструкция)
 
+**📖 Подробная инструкция по настройке `.env`: [ENV_SETUP.md](./ENV_SETUP.md)**
+
 ### Шаг 1: Создание проекта в Supabase
 
 1. Перейдите на [supabase.com](https://supabase.com)

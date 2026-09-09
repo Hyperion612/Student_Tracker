@@ -1,27 +1,23 @@
 import { useEffect, useCallback } from 'react';
 import { useStore } from '../store/useStore';
 import * as api from '../lib/api';
+import { isSupabaseConfigured } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
 export function useSupabaseSync(user: User | null) {
   const {
     settings,
     updateSettings,
-    setDayStatus,
-    setDayRangeStatus,
-    addSubject,
-    removeSubject,
-    unlockAchievement,
-    addGoal,
-    completeGoal,
-    removeGoal,
+    resetAll,
   } = useStore();
 
   // Load data from Supabase on mount
   const loadFromSupabase = useCallback(async () => {
-    if (!user) return;
+    if (!user || !isSupabaseConfigured) return;
 
     try {
+      const state = useStore.getState();
+      
       // Load profile
       const profile = await api.getProfile(user.id);
       updateSettings({
@@ -32,11 +28,11 @@ export function useSupabaseSync(user: User | null) {
         onboardingComplete: profile.onboarding_complete,
       });
 
+      // Clear local data and load from Supabase
+      state.resetAll();
+      
       // Load day records
       const dayRecords = await api.getDayRecords(user.id);
-      const state = useStore.getState();
-      // Clear local data and set from Supabase
-      state.resetAll();
       dayRecords.forEach(record => {
         state.setDayStatus(record.date, record.status, record.subject_id || undefined);
       });
@@ -78,7 +74,7 @@ export function useSupabaseSync(user: User | null) {
 
   // Sync profile changes to Supabase
   useEffect(() => {
-    if (!user || !settings.onboardingComplete) return;
+    if (!user || !settings.onboardingComplete || !isSupabaseConfigured) return;
 
     const syncProfile = async () => {
       try {
@@ -99,10 +95,10 @@ export function useSupabaseSync(user: User | null) {
 
   // Load data when user logs in
   useEffect(() => {
-    if (user) {
+    if (user && isSupabaseConfigured) {
       loadFromSupabase();
     }
   }, [user, loadFromSupabase]);
 
-  return { loadFromSupabase };
+  return { loadFromSupabase, isConfigured: isSupabaseConfigured };
 }

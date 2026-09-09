@@ -30,11 +30,15 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Отладка
+  console.log('App state:', { loading, user, isConfigured, onboardingComplete: settings.onboardingComplete });
+
   // Sync with Supabase when user is authenticated
   useSupabaseSync(user);
   
   // Show loading screen
   if (loading) {
+    console.log('Showing loading screen');
     return (
       <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-lime-400/30 border-t-lime-400 rounded-full animate-spin" />
@@ -44,13 +48,17 @@ export default function App() {
 
   // Show auth screen if not logged in (only if Supabase is configured)
   if (!user && isConfigured) {
+    console.log('Showing Auth screen');
     return <Auth onAuthSuccess={() => {}} />;
   }
 
   // Show onboarding if not complete
   if (!settings.onboardingComplete) {
+    console.log('Showing Onboarding screen');
     return <Onboarding />;
   }
+
+  console.log('Showing main app');
 
   const handleSignOut = async () => {
     if (isConfigured) {

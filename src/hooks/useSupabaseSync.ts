@@ -96,7 +96,9 @@ export function useSupabaseSync(user: User | null) {
   // Load data when user logs in
   useEffect(() => {
     if (user && isSupabaseConfigured) {
-      loadFromSupabase();
+      loadFromSupabase().catch(error => {
+        console.error('Failed to load data from Supabase:', error);
+      });
     }
   }, [user, loadFromSupabase]);
 

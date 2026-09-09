@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { updateProfile } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 const STEPS = [
   {
@@ -38,30 +39,42 @@ export default function Onboarding() {
     if (step === 0) {
       if (name.trim()) {
         updateSettings({ name: name.trim() });
-        // Sync to Supabase if user is authenticated
-        if (user) {
-          await updateProfile(user.id, { name: name.trim() });
+        // Sync to Supabase if user is authenticated and Supabase is configured
+        if (user && isSupabaseConfigured) {
+          try {
+            await updateProfile(user.id, { name: name.trim() });
+          } catch (error) {
+            console.error('Failed to sync profile to Supabase:', error);
+          }
         }
         setStep(1);
       }
     } else if (step === 1) {
       updateSettings({ semesterStart: startDate, semesterEnd: endDate });
-      // Sync to Supabase if user is authenticated
-      if (user) {
-        await updateProfile(user.id, { 
-          semester_start: startDate, 
-          semester_end: endDate 
-        });
+      // Sync to Supabase if user is authenticated and Supabase is configured
+      if (user && isSupabaseConfigured) {
+        try {
+          await updateProfile(user.id, { 
+            semester_start: startDate, 
+            semester_end: endDate 
+          });
+        } catch (error) {
+          console.error('Failed to sync profile to Supabase:', error);
+        }
       }
       setStep(2);
     } else if (step === 2) {
       updateSettings({ accentColor: color.name as 'lime' | 'cyan' | 'violet', onboardingComplete: true });
-      // Sync to Supabase if user is authenticated
-      if (user) {
-        await updateProfile(user.id, { 
-          accent_color: color.name as 'lime' | 'cyan' | 'violet',
-          onboarding_complete: true 
-        });
+      // Sync to Supabase if user is authenticated and Supabase is configured
+      if (user && isSupabaseConfigured) {
+        try {
+          await updateProfile(user.id, { 
+            accent_color: color.name as 'lime' | 'cyan' | 'violet',
+            onboarding_complete: true 
+          });
+        } catch (error) {
+          console.error('Failed to sync profile to Supabase:', error);
+        }
       }
       // Generate demo data for local store
       generateDemoData();

@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { signIn, signUp } from '../lib/api';
 import { isSupabaseConfigured } from '../lib/supabase';
-import { Sparkles, Mail, Lock, User, LogIn, UserPlus, AlertCircle } from 'lucide-react';
+import { useStore } from '../store/useStore';
+import { Sparkles, Mail, Lock, User, LogIn, UserPlus, AlertCircle, Play } from 'lucide-react';
 
 interface AuthProps {
   onAuthSuccess: () => void;
 }
 
 export default function Auth({ onAuthSuccess }: AuthProps) {
+  const { updateSettings, generateDemoData } = useStore();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,7 +18,18 @@ export default function Auth({ onAuthSuccess }: AuthProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Если Supabase не настроен, показываем предупреждение
+  // Гостевой вход - когда Supabase не настроен
+  const handleGuestLogin = () => {
+    const guestName = name.trim() || 'Гость';
+    updateSettings({ 
+      name: guestName,
+      onboardingComplete: true 
+    });
+    generateDemoData();
+    onAuthSuccess();
+  };
+
+  // Если Supabase не настроен, показываем гостевой режим
   if (!isSupabaseConfigured) {
     return (
       <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-4 relative overflow-hidden">
@@ -42,41 +55,69 @@ export default function Auth({ onAuthSuccess }: AuthProps) {
             </div>
           </div>
 
-          {/* Warning Card */}
-          <div className="bg-neutral-900/80 border border-amber-500/30 rounded-2xl p-6 backdrop-blur-xl">
-            <div className="flex items-start gap-3 mb-4">
-              <AlertCircle className="w-6 h-6 text-amber-400 shrink-0 mt-0.5" />
+          {/* Guest Mode Card */}
+          <div className="bg-neutral-900/80 border border-neutral-800 rounded-2xl p-6 backdrop-blur-xl">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-white mb-2 font-display">Добро пожаловать! 👋</h2>
+              <p className="text-sm text-neutral-400">
+                Представьтесь, чтобы начать работу
+              </p>
+            </div>
+
+            <div className="space-y-4">
               <div>
-                <h2 className="text-lg font-bold text-white mb-2">Supabase не настроен</h2>
-                <p className="text-sm text-neutral-400 mb-4">
-                  Для работы с облачной синхронизацией необходимо настроить Supabase.
-                </p>
+                <label className="text-sm text-neutral-400 mb-1.5 block">Ваше имя</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Как вас зовут?"
+                    className="w-full bg-neutral-800 border border-neutral-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400 transition-all"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && name.trim()) {
+                        handleGuestLogin();
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              <motion.button
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                onClick={handleGuestLogin}
+                disabled={!name.trim()}
+                className="w-full py-3 rounded-xl bg-lime-400 text-neutral-900 font-semibold text-base hover:bg-lime-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <Play className="w-4 h-4" />
+                Начать работу
+              </motion.button>
+            </div>
+
+            {/* Info about cloud sync */}
+            <div className="mt-6 pt-4 border-t border-neutral-800">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs text-neutral-400">
+                    <span className="text-amber-400 font-medium">Демо-режим:</span> Данные хранятся локально в браузере.
+                  </p>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    Для облачной синхронизации настройте Supabase (см. README.md)
+                  </p>
+                </div>
               </div>
             </div>
-
-            <div className="bg-neutral-800/50 rounded-xl p-4 mb-4">
-              <h3 className="text-sm font-semibold text-white mb-2">Как настроить:</h3>
-              <ol className="text-xs text-neutral-400 space-y-2 list-decimal list-inside">
-                <li>Создайте файл <code className="text-lime-400">.env</code> в корне проекта</li>
-                <li>Добавьте переменные:
-                  <div className="mt-1 bg-neutral-900 rounded p-2 font-mono text-[10px] text-neutral-300">
-                    VITE_SUPABASE_URL=https://...<br/>
-                    VITE_SUPABASE_ANON_KEY=eyJ...
-                  </div>
-                </li>
-                <li>Перезапустите dev-сервер</li>
-              </ol>
-            </div>
-
-            <p className="text-xs text-neutral-500 text-center">
-              Подробная инструкция в файле <code className="text-lime-400">README.md</code>
-            </p>
           </div>
         </motion.div>
       </div>
     );
   }
 
+  // Полная форма авторизации когда Supabase настроен
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -90,6 +131,7 @@ export default function Auth({ onAuthSuccess }: AuthProps) {
       }
       onAuthSuccess();
     } catch (err: any) {
+      console.error('Auth error:', err);
       setError(err.message || 'Произошла ошибка. Попробуйте ещё раз.');
     } finally {
       setLoading(false);

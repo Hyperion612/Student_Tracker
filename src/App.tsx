@@ -30,15 +30,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Отладка
-  console.log('App state:', { loading, user, isConfigured, onboardingComplete: settings.onboardingComplete });
-
   // Sync with Supabase when user is authenticated
   useSupabaseSync(user);
   
   // Show loading screen
   if (loading) {
-    console.log('Showing loading screen');
     return (
       <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-lime-400/30 border-t-lime-400 rounded-full animate-spin" />
@@ -48,21 +44,26 @@ export default function App() {
 
   // Show auth screen if not logged in (only if Supabase is configured)
   if (!user && isConfigured) {
-    console.log('Showing Auth screen');
     return <Auth onAuthSuccess={() => {}} />;
   }
 
-  // Show onboarding if not complete
-  if (!settings.onboardingComplete) {
-    console.log('Showing Onboarding screen');
-    return <Onboarding />;
+  // Show guest login if Supabase is not configured and onboarding not complete
+  if (!isConfigured && !settings.onboardingComplete) {
+    return <Auth onAuthSuccess={() => {}} />;
   }
 
-  console.log('Showing main app');
+  // Show onboarding if not complete (only for authenticated users)
+  if (isConfigured && !settings.onboardingComplete) {
+    return <Onboarding />;
+  }
 
   const handleSignOut = async () => {
     if (isConfigured) {
       await signOut();
+    } else {
+      // Guest mode - clear local storage and reload
+      localStorage.removeItem('student-tracker-pro');
+      window.location.reload();
     }
   };
   return (
